@@ -7,9 +7,26 @@ class UrlRepository:
     def __init__(self, conn):
         self.conn = conn
 
-    def get_content(self):
+    def get_all(self):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute('SELECT * FROM urls ORDER BY created_at DESC')
+            sql = '''
+                SELECT
+                    u.id,
+                    u.name,
+                    max(uc.created_at) AS last_check_date,
+                    (
+                        SELECT status_code 
+                        FROM url_checks 
+                        WHERE url_id = u.id 
+                        ORDER BY created_at DESC 
+                        LIMIT 1
+                    ) AS status_code
+                FROM urls AS u
+                LEFT JOIN url_checks AS uc ON u.id = uc.url_id
+                GROUP BY u.id, u.name
+                ORDER BY u.created_at DESC;
+            '''
+            cur.execute(sql)
             return cur.fetchall()
 
     def find(self, id):
@@ -19,10 +36,11 @@ class UrlRepository:
             url = cur.fetchone()
             return Url(**url) if url else None
 
-    def find_by_name(self, name):
+    def find_by(self, query):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
-            sql = 'SELECT * FROM urls WHERE name = %s'
-            cur.execute(sql, (name,))
+            field, value = next(iter(query.items()))
+            sql = f'SELECT * FROM urls WHERE {field} = %s'
+            cur.execute(sql, (value,))
             url = cur.fetchone()
             return Url(**url) if url else None
 

@@ -8,3 +8,14 @@ class Url:
     name: str
     created_at: datetime
     id: Optional[int] = None
+
+
+@dataclass
+class Check:
+    url_id: int
+    status_code: int
+    h1: str
+    title: str
+    description: str
+    created_at: datetime
+    id: Optional[int] = None

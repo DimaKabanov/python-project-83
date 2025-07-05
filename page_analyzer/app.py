@@ -3,6 +3,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import psycopg2
+import requests
 from dotenv import load_dotenv
 from flask import (
     Flask,
@@ -14,6 +15,7 @@ from flask import (
     request,
     url_for,
 )
+from requests import RequestException
 
 from page_analyzer.models import Check, Url
 from page_analyzer.repositories.check_repository import CheckRepository
@@ -89,17 +91,28 @@ def urls_show(id):
 
 @app.post('/urls/<id>/checks')
 def urls_check_create(id):
-    check = Check(
-        url_id=id,
-        status_code=200,
-        h1='',
-        title='',
-        description='',
-        created_at=datetime.now()
-    )
+    url = url_repo.find(id)
 
-    check_repo.save(check)
-    flash('Страница успешно проверена', 'success')
+    if not url:
+        return abort(404)
+
+    try:
+        response = requests.get(url.name)
+        response.raise_for_status()
+
+        check = Check(
+            url_id=id,
+            status_code=response.status_code,
+            h1='',
+            title='',
+            description='',
+            created_at=datetime.now()
+        )
+
+        check_repo.save(check)
+        flash('Страница успешно проверена', 'success')
+    except RequestException:
+        flash('Произошла ошибка при проверке', 'danger')
 
     return redirect(url_for('urls_show', id=id), code=302)
 

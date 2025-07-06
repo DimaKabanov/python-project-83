@@ -66,10 +66,10 @@ def urls_create():
         flash('Страница уже существует', 'info')
         return redirect(url_for('urls_show', id=existing_url.id), code=302)
 
-    id = url_repo.save(url)
+    url_id = url_repo.save(url)
     flash('Страница успешно добавлена', 'success')
 
-    return redirect(url_for('urls_show', id=id), code=302)
+    return redirect(url_for('urls_show', id=url_id), code=302)
 
 
 @app.get('/urls/<id>')

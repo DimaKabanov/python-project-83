@@ -5,11 +5,6 @@ class CheckRepository:
     def __init__(self, conn):
         self.conn = conn
 
-    def get_all(self):
-        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute('SELECT * FROM url_checks ORDER BY created_at DESC')
-            return cur.fetchall()
-
     def find_all_by(self, query):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             field, value = next(iter(query.items()))

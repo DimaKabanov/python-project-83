@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from urllib.parse import urlparse
 
 import psycopg2
 import requests
@@ -20,7 +19,7 @@ from requests import RequestException
 from page_analyzer.models import Check, Url
 from page_analyzer.repositories.check_repository import CheckRepository
 from page_analyzer.repositories.url_repository import UrlRepository
-from page_analyzer.validators import validate_url
+from page_analyzer.utils import normalize_url, parse_html, validate_url
 
 load_dotenv()
 
@@ -68,7 +67,7 @@ def urls_create():
         return redirect(url_for('urls_show', id=existing_url.id), code=302)
 
     id = url_repo.save(url)
-    flash('Сайт успешно добавлен', 'success')
+    flash('Страница успешно добавлена', 'success')
 
     return redirect(url_for('urls_show', id=id), code=302)
 
@@ -100,12 +99,14 @@ def urls_check_create(id):
         response = requests.get(url.name)
         response.raise_for_status()
 
+        h1, title, description = parse_html(response.content)
+
         check = Check(
             url_id=id,
             status_code=response.status_code,
-            h1='',
-            title='',
-            description='',
+            h1=h1,
+            title=title,
+            description=description,
             created_at=datetime.now()
         )
 
@@ -127,8 +128,3 @@ def format_date_filter(date):
     if date is None:
         return ''
     return date.strftime('%Y-%m-%d')
-
-
-def normalize_url(url):
-    result = urlparse(url)
-    return f'{result.scheme}://{result.netloc}'

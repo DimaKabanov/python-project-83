@@ -8,6 +8,7 @@ from flask import (
     Flask,
     abort,
     flash,
+    g,
     get_flashed_messages,
     redirect,
     render_template,
@@ -31,8 +32,19 @@ app.config['DATABASE_URL'] = os.getenv('DATABASE_URL')
 
 conn = psycopg2.connect(app.config['DATABASE_URL'])
 
-url_repo = UrlRepository(conn)
-check_repo = CheckRepository(conn)
+
+def get_db():
+    if 'db' not in g:
+        g.db = psycopg2.connect(app.config['DATABASE_URL'])
+    return g.db
+
+
+def get_url_repo():
+    return UrlRepository(get_db())
+
+
+def get_check_repo():
+    return CheckRepository(get_db())
 
 
 @app.get('/')
@@ -42,7 +54,7 @@ def index():
 
 @app.get('/urls')
 def urls_index():
-    urls = url_repo.get_all()
+    urls = get_url_repo().get_all()
     return render_template('urls/index.html', urls=urls)
 
 
@@ -60,13 +72,13 @@ def urls_create():
     normalized_url = normalize_url(form_url)
     url = Url(name=normalized_url, created_at=datetime.now())
 
-    existing_url = url_repo.find_by({'name': url.name})
+    existing_url = get_url_repo().find_by({'name': url.name})
 
     if existing_url:
         flash('Страница уже существует', 'info')
         return redirect(url_for('urls_show', id=existing_url.id), code=302)
 
-    url_id = url_repo.save(url)
+    url_id = get_url_repo().save(url)
     flash('Страница успешно добавлена', 'success')
 
     return redirect(url_for('urls_show', id=url_id), code=302)
@@ -75,8 +87,8 @@ def urls_create():
 @app.get('/urls/<id>')
 def urls_show(id):
     messages = get_flashed_messages(with_categories=True)
-    url = url_repo.find(id)
-    checks = check_repo.find_all_by({'url_id': id})
+    url = get_url_repo().find(id)
+    checks = get_check_repo().find_all_by({'url_id': id})
 
     if not url:
         return abort(404)
@@ -90,7 +102,7 @@ def urls_show(id):
 
 @app.post('/urls/<id>/checks')
 def urls_check_create(id):
-    url = url_repo.find(id)
+    url = get_url_repo().find(id)
 
     if not url:
         return abort(404)
@@ -110,7 +122,7 @@ def urls_check_create(id):
             created_at=datetime.now()
         )
 
-        check_repo.save(check)
+        get_check_repo().save(check)
         flash('Страница успешно проверена', 'success')
     except RequestException:
         flash('Произошла ошибка при проверке', 'danger')

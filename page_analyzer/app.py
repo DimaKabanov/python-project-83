@@ -30,9 +30,6 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')
 app.config['DATABASE_URL'] = os.getenv('DATABASE_URL')
 
 
-conn = psycopg2.connect(app.config['DATABASE_URL'])
-
-
 def get_db():
     if 'db' not in g:
         g.db = psycopg2.connect(app.config['DATABASE_URL'])
